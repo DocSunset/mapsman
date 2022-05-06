@@ -1,6 +1,4 @@
-# mapsman
-
-## A Libmapper Session Manager
+# mapsman: A Libmapper Session Manager
 
 This project is a very early work in progress, made public in order to foster discussion and invite collaboration.
 
