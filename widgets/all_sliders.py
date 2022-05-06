@@ -1,3 +1,28 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# This file is part of mapsman
+#
+# Copyright 2022 Travis West
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the “Software”), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from PySide6 import QtCore, QtWidgets
 import libmapper as mpr
 
@@ -19,7 +44,6 @@ class AllSliders(QtWidgets.QWidget):
     self.libmapper_timer = QtCore.QTimer()
     self.libmapper_timer.timeout.connect(self.libmapper_poll)
     self.libmapper_timer.start(10)
-    self.slider_labels = dict()
     self.sliders = dict()
     QtWidgets.QGridLayout(self) # accessible as self.layout()
     self.table = QtWidgets.QTableWidget(0,2)
@@ -47,46 +71,58 @@ class AllSliders(QtWidgets.QWidget):
   def signal_callback(sig, evt, instance, value, time):
     print("signal_callback {}".format(sig))
 
+
   def copy_signal(self, sig):
     if sig['direction'] == mpr.Direction.OUTGOING: return
 
     name = sig['device']['name'] + "/" + sig['name']
-    minimum = sig['min'] if sig['min'] is not None else 0
+    length = sig['length']
+    minimum = sig['min'] if sig['min'] is not None else [0 for i in range(length)]
     maximum = sig['max'] if sig['max'] is not None else None
     if maximum is None:
-      maximum = 1.0 if sig['type'] is mpr.Type.FLOAT32 else 1000
+      if length > 1:
+        maximum = [1.0 for i in range(length)] if sig['type'] is mpr.Type.FLOAT32 else [1000 for i in range(length)]
+      else:
+        maximum = 1.0  if sig['type'] is mpr.Type.FLOAT32 else 1000
     copy = self.dev.add_signal(name = name
         , dir = mpr.Direction.OUTGOING
-        , length = 1#sig['length']
+        , length = sig['length']
         , datatype = sig['type']
         , min = minimum
         , max = maximum
         , callback = self.signal_callback
         )
+    if type(minimum) is not list: minimum = [minimum]
+    if type(maximum) is not list: maximum = [maximum]
     copy['is_local_copy'] = 1
 
     label_cell = QtWidgets.QTableWidgetItem(name)
-    slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
-    slider.setMinimum(0)
-    slider.setMaximum(1000)
+
+    slider_parent = QtWidgets.QWidget()
+    QtWidgets.QVBoxLayout(slider_parent)
+
+    sliders = [QtWidgets.QSlider(QtCore.Qt.Horizontal) for i in range(length)]
+
+    def slider_cb(v):
+      out = [sliders[i].value()/1000.0 * (maximum[i] - minimum[i]) + minimum[i] for i in range(length)]
+      copy.set_value(out)
+
+    for slider in sliders:
+      slider.setMinimum(0)
+      slider.setMaximum(1000)
+      slider.sliderMoved.connect(slider_cb)
+      slider_parent.layout().addWidget(slider)
+
     self.sliders[name] = label_cell
     row = self.table.rowCount()
     self.table.insertRow(row)
     self.table.setItem(row, 0, label_cell)
-    self.table.setCellWidget(row, 1, slider)
+    self.table.setCellWidget(row, 1, slider_parent)
 
-    def slider_cb(v):
-      print(v)
-      out = v/1000.0
-      if minimum is not None and maximum is not None:
-        out = out * (maximum - minimum) + minimum 
-      print(out)
-      copy.set_value(out)
-
-    slider.sliderMoved.connect(slider_cb)
     mpr.Map(copy, sig).push()
 
     #mpr.Map(sig, copy)
+
 
   def modify_signal(self, sig):
     pass
