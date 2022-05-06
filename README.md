@@ -4,15 +4,15 @@ This project is a very early work in progress, made public in order to foster di
 
 The immediate goal of `mapsman` is to provide an alternative libmapper session manager that provides the following features:
 
--[] Direct manipulation of destination signals that don't have incoming maps ("free destinations").
--[] Simple and unsurprising restoration of simple cases of previous sessions, including maps and free destination states.
+- [x] Direct manipulation of destination signals that don't have incoming maps ("free destinations").
+- [ ] Simple and unsurprising restoration of simple cases of previous sessions, including maps and free destination states.
 
 Eventually, I may also include additional features such as the following:
 
--[] GPU accelerated visualization of recent signal values
--[] Command line based plugin system for launching and restoring shell-invocable libmapper devices
--[] Simple and unsurprising handling of complex session restoration scenarios, such as dealing with offline devices, staging, and name mismatches.
--[] Support for recording and editing datasets derived from signals on the network.
+- [ ] GPU accelerated visualization of recent signal values
+- [ ] Command line based plugin system for launching and restoring shell-invocable libmapper devices
+- [ ] Simple and unsurprising handling of complex session restoration scenarios, such as dealing with offline devices, staging, and name mismatches.
+- [ ] Support for recording and editing datasets derived from signals on the network.
 
 ### Why a new session manager?
 
