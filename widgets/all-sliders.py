@@ -5,6 +5,7 @@ class AllSliders(QtWidgets.QWidget):
   def __init__(self):
     super().__init__()
     self.dev = mpr.Device("AllSliders")
+    while not self.dev.get_is_ready(): self.dev.poll(0)
     self.dev.graph().add_callback(types=mpr.Type.DEVICE
         , func=lambda t, dev, evt: self.device_callback(dev, evt)
         )
@@ -14,7 +15,7 @@ class AllSliders(QtWidgets.QWidget):
     self.dev.graph().add_callback(types=mpr.Type.MAP
         , func=lambda t, mp, evt: self.map_callback(mp, evt)
         )
-    self.dev.graph().subscribe(None, mpr.Type.OBJECT, -1)
+    self.dev.graph().subscribe(None, mpr.Type.SIGNAL, -1)
     self.libmapper_timer = QtCore.QTimer()
     self.libmapper_timer.timeout.connect(self.libmapper_poll)
     self.libmapper_timer.start(10)
@@ -50,12 +51,16 @@ class AllSliders(QtWidgets.QWidget):
     if sig['direction'] == mpr.Direction.OUTGOING: return
 
     name = sig['device']['name'] + "/" + sig['name']
+    minimum = sig['min'] if sig['min'] is not None else 0
+    maximum = sig['max'] if sig['max'] is not None else None
+    if maximum is None:
+      maximum = 1.0 if sig['type'] is mpr.Type.FLOAT32 else 1000
     copy = self.dev.add_signal(name = name
         , dir = mpr.Direction.OUTGOING
         , length = 1#sig['length']
-        , datatype = mpr.Type.INT32
-        , min = 0
-        , max = 1000
+        , datatype = sig['type']
+        , min = minimum
+        , max = maximum
         , callback = self.signal_callback
         )
     copy['is_local_copy'] = 1
@@ -70,8 +75,17 @@ class AllSliders(QtWidgets.QWidget):
     self.table.setItem(row, 0, label_cell)
     self.table.setCellWidget(row, 1, slider)
 
-    slider.sliderMoved.connect(lambda v: copy.set_value(v))
-    mpr.Map(copy, sig)
+    def slider_cb(v):
+      print(v)
+      out = v/1000.0
+      if minimum is not None and maximum is not None:
+        out = out * (maximum - minimum) + minimum 
+      print(out)
+      copy.set_value(out)
+
+    slider.sliderMoved.connect(slider_cb)
+    mpr.Map(copy, sig).push()
+
     #mpr.Map(sig, copy)
 
   def modify_signal(self, sig):
