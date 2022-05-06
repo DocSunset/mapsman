@@ -92,14 +92,19 @@ class AllSliders(QtWidgets.QWidget):
     pass
 
   def remove_signal(self, sig):
-    # get the matching local copy
-    # delete it
-    # 
-    pass
+    name = sig['device']['name'] + "/" + sig['name']
+    if name not in self.sliders: return
+    matches = self.dev.signals().filter(mpr.Property.NAME, name)
+    copy = matches[0]
+    self.dev.remove_signal(copy)
+
+    row = self.sliders[name].row()
+    self.table.model().removeRow(row)
+    del self.sliders[name]
 
   def graph_signal_callback(self, sig, evt):
-    #print("signal callback: {}, {}".format(sig, evt))
-    #print("    ", [sig.get_property(i) for i in range(sig.get_num_properties())])
+    print("signal callback: {}, {}".format(sig, evt))
+    print("    ", [sig.get_property(i) for i in range(sig.get_num_properties())])
     if evt == mpr.Graph.Event.NEW:
       self.copy_signal(sig)
     elif evt == mpr.Graph.Event.MODIFIED:
